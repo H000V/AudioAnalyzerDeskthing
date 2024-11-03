@@ -1,0 +1,21 @@
+{
+  "id": "rav",
+  "isAudioSource": false,
+  "isScreenSaver": false,
+  "isWebApp": true,
+  "isLocalApp": false,
+  "requires": [
+    ""
+  ],
+  "label": "AudioVisualizer",
+  "version": "0.8.8",
+  "description": "Visualizer of audio",
+  "author": "smolvan",
+  "platforms": [
+    "windows",
+    "macos",
+    "linux"
+  ],
+  "homepage": "",
+  "repository": ""
+}
