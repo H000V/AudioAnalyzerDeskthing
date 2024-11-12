@@ -1,120 +1,147 @@
 import { DeskThing as DK } from 'deskthing-server'
 const DeskThing = DK.getInstance()
-export { DeskThing } // Required export of this exact name for the server to connect
+export { DeskThing }
+import AudioStream from 'audiocapture'
 import { Buffer } from 'buffer'
-import portAudio from 'naudiodon'
-import portAudioCheck from '../node_modules/naudiodon/index.js'
 import express from 'express'
 import { WebSocketServer } from 'ws'
 import { createServer, ServerResponse, IncomingMessage } from 'http'
 import * as lame from '@breezystack/lamejs'
-import { exec as execCallback } from 'child_process'
-import { promisify } from 'util'
-import Speaker from 'speaker'
-const exec = promisify(execCallback);
-const app = express();
+const app = express()
 const server = createServer((req: IncomingMessage, res: ServerResponse) => { app(req, res) })
-const wss = new WebSocketServer({ server });
-const deviceData = portAudioCheck.getDevices()
-let deviceIdIn, deviceSampleRateIn  
-for(let i = 0; i<deviceData.length; i++){
-  if(deviceData[i].name == 'CABLE Output (VB-Audio Virtual Cable)'){
-    deviceIdIn = deviceData[i].id
-  }
-}
-const ai = portAudio.AudioIO({
-  inOptions: {
-    channelCount: 2,
-    maxQueue: 1000,
-    sampleFormat: portAudio.SampleFormat16Bit,
-    sampleRate: 48000,
-    deviceId: deviceIdIn,
-  }
-})
-const ao = portAudio.AudioIO({
-  outOptions:{
-    channelCount: 2,
-    maxQueue: 1,
-    sampleFormat: portAudio.SampleFormat16Bit,
-    sampleRate: 48000,
-    deviceId: -1,
-  }
-})
-const desiredName = "CABLE Input (VB-Audio Virtual Cable)";
-let resetDeviceName, deviceIndex
-async function initializeAudioDevices() {
-  try {
-      // Get the current default playback device name
-      const { stdout: defaultDeviceName } = await exec(`powershell.exe -Command "(Get-AudioDevice -List | Where-Object { $_.Default -eq 'True' -and $_.Type -eq 'Playback' }).Name | Out-String"`);
-      console.log("Current default playback device:", defaultDeviceName);
-      resetDeviceName = defaultDeviceName.trim();
+const wss = new WebSocketServer({ server })
+const audioStream = new AudioStream()
+let bufferQueue: Buffer[] = []
 
-      // Get the index of the desired device
-      const { stdout: deviceIndexOutput } = await exec(`powershell.exe -Command "(Get-AudioDevice -List | Where-Object { $_.Name -eq '${desiredName}' }).Index"`);
-      deviceIndex = deviceIndexOutput
+const sampleRate = 48000
+const numChannels = 1
+const bitsPerSample = 16
 
-      if (isNaN(deviceIndex)) {
-          throw new Error("Failed to retrieve a valid device index.");
-      }
 
-      // Set the desired audio device as the default
-      await exec(`powershell.exe -Command "Import-Module AudioDeviceCmdlets; Set-AudioDevice -Index ${deviceIndex}"`);
-      console.log("Audio device set to desired device:", desiredName);
-
-  } catch (error) {
-      console.error("Error during audio device initialization:", error.message);
-  }
-}
-await initializeAudioDevices()
 wss.on('connection', (ws) => {
-  ai.start()
-  ao.start()
-  console.log('Client connected')
-  const mp3Encoder = new lame.Mp3Encoder(1, deviceSampleRateIn, 128)
-  ai.on('data', (chunk) => {
-    ao.write(chunk)
-    const chunks: Buffer[] = []
-    chunks.push(Buffer.from(chunk))
-    const buffer = Buffer.concat(chunks)
-    const int16Array = new Int16Array(buffer.buffer, buffer.byteOffset, buffer.byteLength / Int16Array.BYTES_PER_ELEMENT)
-    const mp3Data = mp3Encoder.encodeBuffer(int16Array)
-    mp3Encoder.flush()
-    sendData(mp3Data)
-    })
-    const sendData = (data) => {
-      if(data.length){
-        ws.send(data, (err) => {
-          if (err) {
-            console.error('Send error:', err)
-          } else {
-          }
-        })
-      }else{
-        console.log('empty mp3 data')
+  audioStream.start()
+  console.log('Client connected :D')
+  
+  function wrapPCMDataIntoWav(pcmData) {
+    // Convert ArrayBuffer to Buffer if necessary
+    const pcmDataBuffer = pcmData instanceof ArrayBuffer ? Buffer.from(pcmData) : pcmData;
+
+    const header = Buffer.alloc(44); // WAV header size
+    const dataChunkSize = pcmDataBuffer.length;
+
+    // Set the header fields according to the WAV format
+    header.write('RIFF', 0); // Chunk ID
+    header.writeUInt32LE(36 + dataChunkSize, 4); // Chunk size (file size - 8)
+    header.write('WAVE', 8); // Format
+    header.write('fmt ', 12); // Subchunk1 ID
+    header.writeUInt32LE(16, 16); // Subchunk1 size
+    header.writeUInt16LE(1, 20); // Audio format (PCM)
+    header.writeUInt16LE(1, 22); // Number of channels
+    header.writeUInt32LE(44100, 24); // Sample rate
+    header.writeUInt32LE(44100 * 2, 28); // Byte rate (sample rate * block align)
+    header.writeUInt16LE(2, 32); // Block align
+    header.writeUInt16LE(16, 34); // Bits per sample
+    header.write('data', 36); // Subchunk2 ID
+    header.writeUInt32LE(dataChunkSize, 40); // Subchunk2 size (data size)
+
+    // Concatenate the header and PCM data into wavData
+    const wavData = Buffer.concat([header, pcmDataBuffer]);
+
+    return wavData;
+  }
+
+  audioStream.on('data', (chunk) => {
+    console.log("CHUNK FROM AUDIO STREAM IMPORTANT: ", chunk)
+    console.log("CHUNK.BUFFER FROM AUDIO STREAM IMPORT: ", chunk.buffer)
+    const wavData = wrapPCMDataIntoWav(chunk)
+    sendData(wavData)
+  })
+  const sendData = (data) => {
+    ws.send(data, (err) => {
+      if (err) {
+        console.error(`Websocket sending data error: ${err.message}`)
       }
-    }
-    ws.on('close', () => {
-      console.log('Client disconnected')
     })
+  }
+  ws.on('close', () => {
+    console.log('Client disconnected D:')
+  })
 })
 
 server.listen(3000, () => {
-    console.log('Server listening on port 3000')
+  console.log('Websocket server listening closely to your audio ;).')
 })
 
 const start = async () => {
-  ai.start()
 }
 
 const stop = async () => {
-  try{
-    const { stdout: deviceIndexOutput } = await exec(`powershell.exe -Command "(Get-AudioDevice -List | Where-Object { $_.Name -eq '${resetDeviceName}' }).Index"`)
-    const resetDeviceIndex = deviceIndexOutput
-    await exec(`powershell.exe -Command "Import-Module AudioDeviceCmdlets; Set-AudioDevice -Index ${resetDeviceIndex}"`)
-  }catch(error) {
-    console.error("Error during audio device initialization:", error.message);
-  }
-  ai.quit()
+  audioStream.stop()
+}
+
+// MaudioInputn Entrypoint of the server
+DeskThing.on('start', start)
+
+// MaudioInputn exit point of the server
+DeskThing.on('stop', stop)
+
+
+
+
+/*
+// This is triggered at the end of this file with the on('start') listener. It runs when the DeskThing starts your app. It serves as the entrypoint for your app
+const start = async () => {
+
+    // This is just one of the ways of synchronizing your data with the server. It waits for the server to have more data and saves it to the Data object here.
+    let Data = await DeskThing.getData()
+    DeskThing.on('data', (newData) => {
+        // Syncs the data with the server
+        Data = newData
+        DeskThing.sendLog('New data received!' + Data)
+    })
+
+    // Template Items
+
+    // This is how to add settings. You need to pass the "settings" object to the AddSettings() function
+    if (!Data?.settings?.theme) {
+        DeskThing.addSettings({
+          "theme": { label: "Theme Choice", value: 'dark', options: [{ label: 'Dark Theme', value: 'dark' }, { label: 'Light Theme', value: 'light' }] },
+        })
+
+        // This will make Data.settings.theme.value equal whatever the user selects
+      }
+
+    // Getting data from the user (Ensure these match)
+    if (!Data?.user_input || !Data?.second_user_input) {
+        const requestScopes = {
+          'user_input': {
+            'value': '',
+            'label': 'Placeholder User Data',
+            'instructions': 'You can make the instructions whatever you want. You can also include HTML inline styling like <a href="https://deskthing.app/" target="_blank" style="color: lightblue;">Making Clickable Links</a>.',
+          },
+          'second_user_input': {
+            'value': 'Prefilled Data',
+            'label': 'Second Option',
+            'instructions': 'Scopes can include as many options as needed',
+          }
+        }
+    
+        DeskThing.getUserInput(requestScopes, async (data) => {
+          if (data.payload.user_input && data.payload.second_user_input) {
+            // You can either save the returned data to your data object or do something with it
+            DeskThing.saveData(data.payload)
+          } else {
+            DeskThing.sendError('Please fill out all the fields! Restart to try again')
+          }
+        })
+      } else {
+        DeskThing.sendLog('Data Exists!')
+        // This will be called is the data already exists in the server
+      }
+} 
+
+const stop = async () => {
+    // Function called when the server is stopped
 }
 
 // Main Entrypoint of the server
@@ -122,3 +149,4 @@ DeskThing.on('start', start)
 
 // Main exit point of the server
 DeskThing.on('stop', stop)
+*/

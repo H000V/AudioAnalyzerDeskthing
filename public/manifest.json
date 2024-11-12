@@ -1,20 +1,23 @@
 {
-  "id": "rav",
+  "id": "audiovisualizer",
   "isAudioSource": false,
   "isScreenSaver": false,
   "isWebApp": true,
   "isLocalApp": false,
-  "requires": [
-    ""
+  "requires": [],
+  "label": "Audio Visualizer",
+  "version": "0.9.1",
+  "version_code": "0.0.1",
+  "compatible_server": [
+    "v0.9.X"
   ],
-  "label": "AudioVisualizer",
-  "version": "0.8.8",
-  "description": "Visualizer of audio",
+  "compatible_client": [
+    "v0.9.X"
+  ],
+  "description": "Visualizer for audio",
   "author": "smolvan",
   "platforms": [
-    "windows",
-    "macos",
-    "linux"
+    "windows"
   ],
   "homepage": "",
   "repository": ""
