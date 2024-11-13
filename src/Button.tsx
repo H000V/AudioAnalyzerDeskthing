@@ -12,8 +12,8 @@ const Button = ({ startStreaming, setVisible }: ButtonProps) => {
         setVisible(false)
         audioCtx = new AudioContext()
         analyser = audioCtx.createAnalyser()
-        analyser.fftSize = 1024
-        analyser.smoothingTimeConstant = 0.6
+        analyser.fftSize = 512
+        analyser.smoothingTimeConstant = 0.7
         startStreaming(audioCtx, analyser)
     }
     return (
