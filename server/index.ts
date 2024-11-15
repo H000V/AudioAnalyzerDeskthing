@@ -1,7 +1,7 @@
 import { DeskThing as DK } from 'deskthing-server'
 const DeskThing = DK.getInstance()
 export { DeskThing }
-import AudioStream from 'audiocapture'
+import AudioStream from 'wasapi-audio-capture'
 import { Buffer } from 'buffer'
 import express from 'express'
 import { WebSocketServer } from 'ws'
@@ -13,119 +13,100 @@ const wss = new WebSocketServer({ server })
 const audioStream = new AudioStream()
 let bufferQueue: Buffer[] = []
 
-wss.on('connection', (ws) => {
-  audioStream.start()
-  console.log('Client connected :D')
+const start = async () => {
 
-  const mp3Encoder = new lame.Mp3Encoder(1, 48000, 128)
-  audioStream.on('data', (chunk) => {
-    bufferQueue.push(Buffer.from(chunk));
-    while (bufferQueue.length > 0) {
-      const buffer = bufferQueue.shift();
-      if(buffer){
-      const int16Array = new Int16Array(buffer.buffer, buffer.byteOffset, buffer.length / Int16Array.BYTES_PER_ELEMENT);
+  // This is just one of the ways of synchronizing your data with the server. It waits for the server to have more data and saves it to the Data object here.
+  let Data = await DeskThing.getData()
+  DeskThing.on('data', (newData) => {
+      // Syncs the data with the server
+      Data = newData
+      DeskThing.sendLog('New data received!' + Data)
+  })
+  
+  // This is how to add settings. You need to pass the "settings" object to the AddSettings() function
+  if (!Data?.settings?.isRadial || !Data?.settings?.isMirrored || !Data?.settings?.fftSize || !Data?.settings?.smoothingTimeConstant ) {
+    DeskThing.addSettings({
+      isRadial: { 
+        label: "Circle graph or naw?", 
+        value: 'false',
+        type: 'select',
+        options: [
+          { label: "Yes circle graph", value: 'true' },
+          { label: "No circle graph", value: 'false' },
+        ],
+      },
+      isMirrored: {
+        label: "Mirror the graph or naw?",
+        value: 'false', 
+        type: 'select',
+        options: [
+          { label: "Yes mirror graph", value: 'true' },
+          { label: "No mirror graph", value: 'false' },
+        ],
+      },
+      fftSize: { 
+        label: "How many rectangles for analysis?", 
+        value: 256,
+        description: 'This defines the buffer size that is used to perform the analysis. It MUST be a power of two. Range 32-32768. CAUTION: Values higher than 1024 may heat up your carthing.', 
+        type: 'number', 
+        min: 32, 
+        max: 8192,
+      },
+      smoothingTimeConstant: { 
+        label: "Prefered update frequency?", 
+        value: 0.6, 
+        description: "This value determines how often your graph updates. a value of zero causes quickly fluctuating changes, a value of one causes zero changes.", 
+        type: 'number', 
+        min: 0, 
+        max: 1,
+      },
+    })
+    // This will make Data.settings.theme.value equal whatever the user selects
+  }
 
-      if (int16Array.length > 0) {
-          const mp3Data = mp3Encoder.encodeBuffer(int16Array);
-          if (mp3Data.length > 500) {
-              sendData(mp3Data);
-          }
+  wss.on('connection', (ws) => {
+    audioStream.start()
+    console.log('Client connected :D')
+  
+    const mp3Encoder = new lame.Mp3Encoder(1, 48000, 128)
+    audioStream.on('data', (chunk) => {
+      bufferQueue.push(Buffer.from(chunk));
+      while (bufferQueue.length > 0) {
+        const buffer = bufferQueue.shift();
+        if(buffer){
+        const int16Array = new Int16Array(buffer.buffer, buffer.byteOffset, buffer.length / Int16Array.BYTES_PER_ELEMENT);
+  
+        if (int16Array.length > 0) {
+            const mp3Data = mp3Encoder.encodeBuffer(int16Array);
+            if (mp3Data.length > 500) {
+                sendData(mp3Data);
+            }
+        }
       }
     }
-  }
-  })
-  const sendData = (data) => {
-    ws.send(data, (err) => {
-      if (err) {
-        console.error(`Websocket sending data error: ${err.message}`)
-      }
     })
-  }
-  ws.on('close', () => {
-    console.log('Client disconnected D:')
-    mp3Encoder.flush()
-  })
-})
-
-server.listen(3000, () => {
-  console.log('Websocket server listening closely to your audio ;).')
-})
-
-const start = async () => {
-}
-
-const stop = async () => {
-  audioStream.stop()
-}
-
-// MaudioInputn Entrypoint of the server
-DeskThing.on('start', start)
-
-// MaudioInputn exit point of the server
-DeskThing.on('stop', stop)
-
-
-
-
-/*
-// This is triggered at the end of this file with the on('start') listener. It runs when the DeskThing starts your app. It serves as the entrypoint for your app
-const start = async () => {
-
-    // This is just one of the ways of synchronizing your data with the server. It waits for the server to have more data and saves it to the Data object here.
-    let Data = await DeskThing.getData()
-    DeskThing.on('data', (newData) => {
-        // Syncs the data with the server
-        Data = newData
-        DeskThing.sendLog('New data received!' + Data)
-    })
-
-    // Template Items
-
-    // This is how to add settings. You need to pass the "settings" object to the AddSettings() function
-    if (!Data?.settings?.theme) {
-        DeskThing.addSettings({
-          "theme": { label: "Theme Choice", value: 'dark', options: [{ label: 'Dark Theme', value: 'dark' }, { label: 'Light Theme', value: 'light' }] },
-        })
-
-        // This will make Data.settings.theme.value equal whatever the user selects
-      }
-
-    // Getting data from the user (Ensure these match)
-    if (!Data?.user_input || !Data?.second_user_input) {
-        const requestScopes = {
-          'user_input': {
-            'value': '',
-            'label': 'Placeholder User Data',
-            'instructions': 'You can make the instructions whatever you want. You can also include HTML inline styling like <a href="https://deskthing.app/" target="_blank" style="color: lightblue;">Making Clickable Links</a>.',
-          },
-          'second_user_input': {
-            'value': 'Prefilled Data',
-            'label': 'Second Option',
-            'instructions': 'Scopes can include as many options as needed',
-          }
+    const sendData = (data) => {
+      ws.send(data, (err) => {
+        if (err) {
+          console.error(`Websocket sending data error: ${err.message}`)
         }
-    
-        DeskThing.getUserInput(requestScopes, async (data) => {
-          if (data.payload.user_input && data.payload.second_user_input) {
-            // You can either save the returned data to your data object or do something with it
-            DeskThing.saveData(data.payload)
-          } else {
-            DeskThing.sendError('Please fill out all the fields! Restart to try again')
-          }
-        })
-      } else {
-        DeskThing.sendLog('Data Exists!')
-        // This will be called is the data already exists in the server
-      }
-} 
+      })
+    }
+    ws.on('close', () => {
+      console.log('Client disconnected D:')
+      mp3Encoder.flush()
+    })
+  })
+  
+  server.listen(3000, () => {
+    console.log('Websocket server listening closely to your audio ;).')
+  })
 
-const stop = async () => {
-    // Function called when the server is stopped
+  const stop = async () => {
+    audioStream.stop()
+  }
+  DeskThing.on("stop", stop)
+
 }
-
 // Main Entrypoint of the server
 DeskThing.on('start', start)
-
-// Main exit point of the server
-DeskThing.on('stop', stop)
-*/
