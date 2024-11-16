@@ -1,5 +1,8 @@
-import 'react'
+import settingsStore, { SettingsStore } from './settingsStore'
+import { Settings } from 'deskthing-client/dist/types'
+import { useState, useEffect } from 'react'
 import './index.css'
+
 interface ButtonProps {
     startStreaming: (audioCtx, analyser) => void
     isVisible: boolean
@@ -8,12 +11,53 @@ interface ButtonProps {
 let audioCtx: AudioContext
 let analyser: AnalyserNode
 const Button = ({ startStreaming, setVisible }: ButtonProps) => {
+    const [fftSize, setFftSize] = useState(0)
+    const [smoothingTimeConstant, setSmoothingTimeConstant] = useState(0)
+
+    useEffect(() => {
+        const onSettings = async (data: Settings) => {
+            if(data.settings.fftSize.value){
+                setFftSize(data.settings.fftSize.value as number)
+            }
+            if(data.settings.smoothingTimeConstant.value){
+                setSmoothingTimeConstant(data.settings.smoothingTimeConstant.value as number)
+            }
+        }
+        const listener = settingsStore.on(onSettings)
+        const getSettings = async () => {
+            const data = settingsStore.getSettings()
+            if(data){
+                if(data.settings.fftSize.value){
+                    setFftSize(data.settings.fftSize.value as number)
+                }
+                if(data.settings.smoothingTimeConstant.value){
+                    setSmoothingTimeConstant(data.settings.smoothingTimeConstant.value as number)
+                }
+            }else{
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+                const data = settingsStore.getSettings()
+                if(data){
+                    if(data.settings.fftSize.value){
+                        setFftSize(data.settings.fftSize.value as number)
+                    }
+                    if(data.settings.smoothingTimeConstant.value){
+                        setSmoothingTimeConstant(data.settings.smoothingTimeConstant.value as number)
+                    }
+                }
+            }
+        }
+        getSettings()
+        return () => {
+            listener()
+        }
+    })
+
     const createAudioNode = () => {
         setVisible(false)
         audioCtx = new AudioContext()
         analyser = audioCtx.createAnalyser()
-        analyser.fftSize = 512
-        analyser.smoothingTimeConstant = 0.7
+        analyser.fftSize = fftSize
+        analyser.smoothingTimeConstant = smoothingTimeConstant
         startStreaming(audioCtx, analyser)
     }
     return (

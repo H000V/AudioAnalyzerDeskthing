@@ -24,16 +24,21 @@ const start = async () => {
   })
   
   // This is how to add settings. You need to pass the "settings" object to the AddSettings() function
-  if (!Data?.settings?.isRadial || !Data?.settings?.isMirrored || !Data?.settings?.fftSize || !Data?.settings?.smoothingTimeConstant || !Data?.settings?.topColor || !Data?.settings?.middleColor || !Data?.settings?.bottomColor ) {
+  if (!Data?.settings?.isRadial || !Data?.settings?.isMirroredHorizontal || !Data?.settings?.isMirroredVertical || !Data?.settings?.fftSize || !Data?.settings?.smoothingTimeConstant || !Data?.settings?.topColor || !Data?.settings?.middleColor || !Data?.settings?.bottomColor ) {
     DeskThing.addSettings({
       isRadial: { 
         label: "Circle graph or naw?", 
         value: false,
         type: "boolean",
       },
-      isMirrored: {
-        label: "Mirror the graph or naw?",
+      isMirroredHorizontal: {
+        label: "Mirror the graph along the y-axis or naw?",
         value: false, 
+        type: "boolean",
+      },
+      isMirroredVertical: {
+        label: "Mirror the graph along the x-axis or naw?",
+        value: false,
         type: "boolean",
       },
       fftSize: { 
