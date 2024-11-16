@@ -61,9 +61,9 @@ const App: React.FC = () => {
         for(let i = 0; i < bufferLength; i++){
           barHeights[i] = Math.abs(barHeights[i] - averageAmplitude)
           const gradient = ctx.createLinearGradient(0, centerY - barHeights[i] / 2, 0, centerY + barHeights[i] / 2)
-          gradient.addColorStop(0, 'rgba(139, 25, 25, 1)')
-          gradient.addColorStop(0.50, 'rgba(0, 0, 0, 1)')
-          gradient.addColorStop(1, 'rgba(3, 80, 150, 1)')
+          gradient.addColorStop(0, '#8B1919')
+          gradient.addColorStop(0.50, '#000000')
+          gradient.addColorStop(1, '#035096')
           ctx.fillStyle = gradient
           const x = (barWidth + 1) * i
           ctx.fillRect(centerX + x, centerY - barHeights[i] / 2, barWidth, barHeights[i])
