@@ -136,43 +136,34 @@ const App: React.FC = () => {
       const barWidth = (canvas.width / bufferLength) * 2.5
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const radius = Math.min(centerX, centerY) * 0.5; // Radius for the visualizer
-      const barAngle = (2 * Math.PI) / bufferLength; // Angle for each bar
-      const maxSegments = 10;
-      const minWidth = 2;
-      const maxWidth = 10;
-      
+      const radius = Math.min(canvas.width, canvas.height) * 0.4
+      const innerRadius = radius * 0.7
+      const outerRadius = radius
+      const getAngle = (i) => {
+        return (i / bufferLength) * 2 * Math.PI;
+      }
+      const radialXY = (angle, radius): [number, number] => {
+        return [centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle)]
+      }
       if(ctx){
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if(isRadial == true){
           for (let i = 0; i < bufferLength; i++) {
-            barHeights[i] = Math.abs(barHeights[i] - averageAmplitude)
-            const barLength = radius * (barHeights[i] / 255); // Scale bar length based on audio data
-            const angle = i * barAngle;
-            const startX = centerX + Math.cos(angle) * radius;
-            const startY = centerY + Math.sin(angle) * radius;
-            const endX = centerX + Math.cos(angle) * (radius + barLength);
-            const endY = centerY + Math.sin(angle) * (radius + barLength);
-            const startRadius = radius;
-            const endRadius = radius + barHeights[i];
-            
-            // Create gradient
-            const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
-            gradient.addColorStop(0, topColor);
-            gradient.addColorStop(0.5, middleColor);
-            gradient.addColorStop(1, bottomColor);
-            ctx.strokeStyle = gradient;
-            for (let j = 0; j < maxSegments; j++) {
-              // Calculate incremental radius and line width for the segment
-              const segmentRadius = startRadius + (j / maxSegments) * barHeights[i];
-              ctx.lineWidth = minWidth + ((maxWidth - minWidth) * (j / maxSegments));
-              ctx.beginPath();
-              ctx.arc(startX, startY, segmentRadius, angle - 0.02, angle + 0.02); // Small arc for each segment
-              ctx.stroke();
-              if (segmentRadius >= endRadius) {
-                break;
-              }
-            }
+            const barLength = innerRadius + (outerRadius - innerRadius) * (barHeights[i] / 255);
+            const angle = getAngle(i)
+            const nextAngle = getAngle(i + 1)
+            const gradient = ctx.createLinearGradient(centerX + Math.cos(angle) * innerRadius, centerY + Math.sin(angle) * innerRadius, centerX + Math.cos(angle) * outerRadius, centerY + Math.sin(angle) * outerRadius)
+            gradient.addColorStop(0, topColor)
+            gradient.addColorStop(0.1, middleColor)
+            gradient.addColorStop(0.15, bottomColor)
+            ctx.fillStyle = gradient
+            ctx.beginPath()
+            ctx.moveTo(...radialXY(angle, innerRadius))
+            ctx.lineTo(...radialXY(angle, barLength))
+            ctx.lineTo(...radialXY(nextAngle, barLength))
+            ctx.lineTo(...radialXY(nextAngle, innerRadius))
+            ctx.closePath()
+            ctx.fill()
           }
         }else if(isRadial == false){
           for(let i = 0; i < bufferLength; i++){
