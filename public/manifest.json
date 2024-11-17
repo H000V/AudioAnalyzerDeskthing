@@ -6,7 +6,7 @@
   "isLocalApp": false,
   "requires": [],
   "label": "Audio Visualizer",
-  "version": "0.9.1",
+  "version": "0.0.1",
   "version_code": "0.0.1",
   "compatible_server": [
     "v0.9.X"

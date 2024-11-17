@@ -1,7 +1,7 @@
 {
   "name": "audiovisualizer",
   "private": true,
-  "version": "0.9.1",
+  "version": "0.0.1",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -16,13 +16,13 @@
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
+    "audio-stream-module": "^1.0.0",
     "deskthing-client": "latest",
     "deskthing-server": "latest",
     "express": "^4.21.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tsx": "^4.19.2",
-    "wasapi-audio-capture": "^0.1.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
