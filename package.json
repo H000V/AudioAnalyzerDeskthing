@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run build-server",
-    "build-server": "esbuild server/index.ts --bundle --platform=node --outdir=dist/",
+    "build-server": "node esbuild.config.mjs",
     "setup": "node setup.js",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -16,13 +16,13 @@
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
-    "audio-stream-module": "^1.0.0",
     "deskthing-client": "latest",
     "deskthing-server": "latest",
     "express": "^4.21.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tsx": "^4.19.2",
+    "wasapi-audio-capture": "latest",
     "ws": "^8.18.0"
   },
   "devDependencies": {
@@ -36,7 +36,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "concurrently": "^9.0.1",
-    "esbuild": "^0.19.2",
+    "esbuild": "^0.19.12",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",

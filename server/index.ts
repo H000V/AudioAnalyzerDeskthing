@@ -1,7 +1,7 @@
 import { DeskThing as DK } from "deskthing-server"
 const DeskThing = DK.getInstance()
 export { DeskThing }
-import AudioStream from "audio-stream-module"
+import AudioStream from "wasapi-audio-capture"
 import { Buffer } from "buffer"
 import express from "express"
 import { WebSocketServer } from "ws"
