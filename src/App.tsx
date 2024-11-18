@@ -9,15 +9,16 @@ const App: React.FC = () => {
   const [isRadial, setRadial] = useState(false)
   const [isMirroredHorizontal, setMirroredHorizontal] = useState(false)
   const [isMirroredVertical, setMirroredVertical] = useState(false)
-  const [topColor, setTopColor] = useState('')
-  const [middleColor, setMiddleColor] = useState('')
-  const [bottomColor, setBottomColor] = useState('')
+  const [topColor, setTopColor] = useState('#8B1919')
+  const [middleColor, setMiddleColor] = useState('#000000')
+  const [bottomColor, setBottomColor] = useState('#035096')
   const [isVisible, setVisible] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const audioBufferQueue: AudioBuffer[] = []
 
   useEffect(() => {
     const onSettings = async (data: Settings) => {
+      console.log(`Received settings from server :D, ${data.settings}`)
       if(data.settings.isRadial.value){
         setRadial(data.settings.isRadial.value as unknown as boolean)
       }
@@ -96,7 +97,6 @@ const App: React.FC = () => {
     ws.binaryType = 'arraybuffer'
     ws.onmessage = ((event) => {
       audioCtx.decodeAudioData(event.data, (buffer) => {
-        console.log("Encoded mp3 data after websocket being sent to bufferqueue: ", buffer)
         audioBufferQueue.push(buffer)
         if(audioBufferQueue.length == 1){
           playNextBuffer(audioCtx, analyser)

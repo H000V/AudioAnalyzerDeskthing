@@ -81,7 +81,7 @@ const start = async () => {
 
   wss.on("connection", (ws) => {
     audioStream.start()
-    console.log("Client connected :D")
+    DeskThing.sendLog("Client connected :D")
   
     const mp3Encoder = new lame.Mp3Encoder(1, 48000, 128)
     audioStream.on("data", (chunk) => {
@@ -103,18 +103,18 @@ const start = async () => {
     const sendData = (data) => {
       ws.send(data, (err) => {
         if (err) {
-          console.error(`Websocket sending data error: ${err.message}`)
+          DeskThing.sendError(`Websocket sending data error: ${err.message}`)
         }
       })
     }
     ws.on("close", () => {
-      console.log("Client disconnected D:")
+      DeskThing.sendLog("Client disconnected D:")
       mp3Encoder.flush()
     })
   })
   
   server.listen(3000, () => {
-    console.log("Websocket server listening closely to your audio ;).")
+    DeskThing.sendLog("Websocket server listening closely to your audio.")
   })
 
   const stop = async () => {
