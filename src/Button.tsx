@@ -1,4 +1,4 @@
-import settingsStore, { SettingsStore } from './settingsStore'
+import { SettingsStore } from './settingsStore'
 import { Settings } from 'deskthing-client/dist/types'
 import { useState, useEffect } from 'react'
 import './index.css'
@@ -11,6 +11,7 @@ interface ButtonProps {
 let audioCtx: AudioContext
 let analyser: AnalyserNode
 const Button = ({ startStreaming, setVisible }: ButtonProps) => {
+    const settingsStore = SettingsStore.getInstance()
     const [fftSize, setFftSize] = useState(0)
     const [smoothingTimeConstant, setSmoothingTimeConstant] = useState(0)
 

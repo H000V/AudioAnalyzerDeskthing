@@ -185,22 +185,35 @@ const App: React.FC = () => {
         requestAnimationFrame(() => draw(analyser));
     }
   }
-  if(isVisible){
-    return (
-      <div>
-        <Button startStreaming={startStreaming} isVisible={isVisible} setVisible={setVisible}></Button>
-      </div>
-    )
-  }else if(!isVisible){
-    return(
-      <div>
-        <canvas className='relative w-screen h-screen' ref={canvasRef}></canvas>     
-      </div>
-    )
-  }else{
-    return(
-      <div>SOMETHING REALLY BROKE</div>
-    )
-  }
+  
+  useEffect(() => {
+    const handleResize = () => {
+      const canvas = canvasRef.current
+      if (canvas) {
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+      }
+    }
+
+    // Set initial size
+    handleResize()
+
+    // Update size on window resize
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  return(
+    <div>
+    {isVisible ? (
+      <Button startStreaming={startStreaming} isVisible={isVisible} setVisible={setVisible}></Button>
+    ) : (
+      <canvas className='relative w-screen h-screen' ref={canvasRef}></canvas>
+    )}
+    </div>
+  )
 }
 export default App
